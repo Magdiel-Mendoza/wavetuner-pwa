@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WaveTuner FM | WT FM</title>
+    <meta name="theme-color" content="#020617" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzgwMDAyMCIgcng9IjEwMCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNDUlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSW50ZXIsIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI5MDAiIGZvbnQtc2l6ZT0iMjIwIiBmaWxsPSJ3aGl0ZSI+V1Q8L3RleHQ+CiAgPHRleHQgeD0iNTAlIiB5PSI3NSUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJJbnRlciwgc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSI4MCIgZmlsbD0id2hpdGUiPkZNPC90ZXh0Pgo8L3N2Zz4=" />
+    
+    <!-- Librerías Externas via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.all.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'tuner-gray': '#0f172a',
+              'tuner-accent': '#22d3ee',
+              'tuner-dark': '#020617',
+              'tuner-light-bg': '#9daab9', 
+            },
+            animation: {
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'bar-grow': 'barGrow 1.2s ease-in-out infinite',
+              'fade-in-up': 'fadeInUp 0.3s ease-out forwards',
+            },
+            keyframes: {
+              barGrow: {
+                '0%, 100%': { height: '10%' },
+                '50%': { height: '100%' },
+              },
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono&display=swap');
+      
+      :root {
+        --tuner-bg: #020617;
+        --glass-bg: rgba(15, 23, 42, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+      }
+
+      body.light-theme {
+        --tuner-bg: #9daab9; 
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(0, 0, 0, 0.2);
+        --text-primary: #020617; 
+        --text-secondary: #1e293b; 
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--tuner-bg);
+        color: var(--text-primary);
+        transition: background-color 0.5s ease, color 0.5s ease;
+        overscroll-behavior-y: contain;
+        margin: 0;
+      }
+
+      .glass {
+        background: var(--glass-bg);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--glass-border);
+        transition: all 0.5s ease;
+      }
+
+      .visualizer-bar {
+        width: 4px;
+        background: #22d3ee;
+        border-radius: 2px;
+        transition: height 0.2s ease;
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+      }
+
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+      .light-theme ::-webkit-scrollbar-thumb { background: #64748b; }
+
+      input[type=range] { -webkit-appearance: none; background: transparent; }
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 14px; width: 14px; border-radius: 50%;
+        background: #22d3ee; cursor: pointer; margin-top: -5px;
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.6);
+      }
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px;
+      }
+      .light-theme input[type=range]::-webkit-slider-runnable-track {
+        background: rgba(0, 0, 0, 0.4);
+      }
+    </style>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+        "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react,react-dom",
+        "uuid": "https://esm.sh/uuid@9.0.1"
+      }
+    }
+    </script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="min-h-screen">
+    <div id="root">
+        <div class="flex flex-col items-center justify-center min-h-screen space-y-4 text-center">
+            <div class="w-12 h-12 border-4 border-tuner-accent border-t-transparent rounded-full animate-spin"></div>
+            <div class="text-tuner-accent font-bold tracking-widest animate-pulse uppercase text-sm">Iniciando WaveTuner FM...</div>
+        </div>
+    </div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useRef, useState, useEffect, useCallback } from 'react';
+        import ReactDOM from 'react-dom/client';
+        import { 
+            Play, Square, Volume2, VolumeX, Radio, Mic, AlertCircle, 
+            Settings, X, Loader2, RadioTower, Trash2, Sun, Moon, Palette,
+            FileDown, Check, Share2, PlusCircle, Star, PlayCircle, FileUp, Sparkles, Clock, CalendarClock, Smartphone, FolderCheck, ExternalLink
+        } from 'lucide-react';
+        import { v4 as uuidv4 } from 'uuid';
+
+        // --- CONSTANTES ---
+        const APP_VERSION = "2.6.1";
+        const VERSION_DATE = "04 de febrero de 2026";
+        const STORAGE_KEY = 'wavetuner_pro_v261_final';
+        const THEME_KEY = 'wavetuner_theme';
+        const QUALITY_STORAGE_KEY = 'wavetuner_quality_pref_v260';
+
+        const DEFAULT_STATIONS = [
+            { id: '1', name: 'Radio Paradise', url: 'https://stream.radioparadise.com/mp3-128', addedAt: Date.now(), favorite: true },
+            { id: '2', name: 'Classic FM UK', url: 'https://media-ssl.musicradio.com/ClassicFM', addedAt: Date.now() + 1 },
+            { id: '3', name: 'SomaFM Groove Salad', url: 'https://ice1.somafm.com/groovesad-128-mp3', addedAt: Date.now() + 2 }
+        ];
+
+        const RECORDING_QUALITIES = [
+            { id: 'std', label: 'Estándar MP3 (128 kbps)', bits: 128 },
+            { id: 'high', label: 'Alta MP3 (192 kbps)', bits: 192 },
+            { id: 'max', label: 'Máxima MP3 (320 kbps)', bits: 320 },
+        ];
+
+        const DAYS_SHORT = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+        // --- COMPONENTES ---
+
+        const Visualizer = ({ isPlaying }) => (
+            <div className="flex items-end justify-center gap-1 h-8 w-24 mb-4">
+                {[...Array(12)].map((_, i) => (
+                    <div 
+                        key={i} 
+                        className={`visualizer-bar ${isPlaying ? 'animate-bar-grow' : 'h-[10%]'}`}
+                        style={{ 
+                            animationDelay: `${i * 0.1}s`,
+                            animationDuration: `${0.8 + Math.random()}s`
+                        }}
+                    />
+                ))}
+            </div>
+        );
+
+        const RadioPlayer = ({ station, onThemeToggle, currentTheme, allStations, onStationSelect }) => {
+            const audioRef = useRef(null);
+            const heartbeatAudioRef = useRef(null);
+            const wakeLockRef = useRef(null);
+            
+            const audioCtxRef = useRef(null);
+            const mediaSourceNodeRef = useRef(null);
+            const processorNodeRef = useRef(null);
+            const mp3EncoderRef = useRef(null);
+            const mp3DataRef = useRef([]);
+
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [isBuffering, setIsBuffering] = useState(false);
+            const [volume, setVolume] = useState(0.7);
+            const [isMuted, setIsMuted] = useState(false);
+            const [error, setError] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+
+            const [isRecording, setIsRecording] = useState(false);
+            const [recordingDuration, setRecordingDuration] = useState(0);
+            const recordingTimerRef = useRef(null);
+            
+            const [showSettings, setShowSettings] = useState(false);
+            const [showScheduler, setShowScheduler] = useState(false);
+            const [recordingQuality, setRecordingQuality] = useState(() => parseInt(localStorage.getItem(QUALITY_STORAGE_KEY)) || 192);
+
+            const [activeSchedule, setActiveSchedule] = useState(null);
+            const activeScheduleRef = useRef(null);
+            const [schedMode, setSchedMode] = useState('duration'); 
+            const [schedDurationInput, setSchedDurationInput] = useState('30');
+            const [schedRecurrence, setSchedRecurrence] = useState('daily');
+            const [schedDate, setSchedDate] = useState(''); 
+            const [schedStartTime, setSchedStartTime] = useState('');
+            const [schedEndTime, setSchedEndTime] = useState('');
+            const [schedStationId, setSchedStationId] = useState('');
+            const [schedDays, setSchedDays] = useState([1,2,3,4,5,6]);
+
+            useEffect(() => { activeScheduleRef.current = activeSchedule; }, [activeSchedule]);
+
+            const setupKeepAlive = useCallback(async (active) => {
+                try {
+                    if (active) {
+                        if (!heartbeatAudioRef.current) {
+                            const audio = new Audio();
+                            audio.loop = true;
+                            audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFRm10IBAAAAABAAEAVFYAAFRWAAABAAgAZGF0YQAAAAA=";
+                            heartbeatAudioRef.current = audio;
+                        }
+                        heartbeatAudioRef.current.play().catch(() => {});
+                        if ('wakeLock' in navigator && !wakeLockRef.current) {
+                            wakeLockRef.current = await navigator.wakeLock.request('screen');
+                        }
+                    } else {
+                        if (heartbeatAudioRef.current) heartbeatAudioRef.current.pause();
+                        if (wakeLockRef.current) { await wakeLockRef.current.release(); wakeLockRef.current = null; }
+                    }
+                } catch (e) { console.warn("KeepAlive Error:", e); }
+            }, []);
+
+            const saveRecording = useCallback(() => {
+                if (mp3DataRef.current.length === 0) return;
+                const mp3buf = mp3EncoderRef.current.flush();
+                if (mp3buf.length > 0) mp3DataRef.current.push(new Int8Array(mp3buf));
+                const blob = new Blob(mp3DataRef.current, { type: 'audio/mp3' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const now = new Date();
+                const dStr = now.toLocaleDateString().replace(/\//g, '-');
+                const tStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+                const filename = `${station?.name || 'Radio'}-${dStr}-${tStr}.mp3`;
+                
+                a.href = url;
+                a.download = filename;
+                a.click();
+
+                mp3DataRef.current = [];
+                setRecordingDuration(0);
+            }, [station?.name]);
+
+            const stopRecording = useCallback(() => {
+                setIsRecording(false);
+                if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+                if (processorNodeRef.current) { 
+                    processorNodeRef.current.disconnect(); 
+                    processorNodeRef.current.onaudioprocess = null; 
+                }
+                saveRecording();
+            }, [saveRecording]);
+
+            const startRecording = useCallback(() => {
+                if (!audioRef.current || audioRef.current.paused) {
+                    if(station) audioRef.current.play().catch(() => setError("Reproducción requerida para grabar."));
+                    return;
+                }
+                if (!audioCtxRef.current) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    audioCtxRef.current = new AC();
+                    mediaSourceNodeRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current);
+                    mediaSourceNodeRef.current.connect(audioCtxRef.current.destination);
+                }
+                if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+
+                mp3DataRef.current = [];
+                mp3EncoderRef.current = new lamejs.Mp3Encoder(2, audioCtxRef.current.sampleRate, recordingQuality);
+                processorNodeRef.current = audioCtxRef.current.createScriptProcessor(4096, 2, 2);
+                
+                processorNodeRef.current.onaudioprocess = (e) => {
+                    const l = e.inputBuffer.getChannelData(0);
+                    const r = e.inputBuffer.getChannelData(1);
+                    const l16 = new Int16Array(l.length);
+                    const r16 = new Int16Array(r.length);
+                    for (let i = 0; i < l.length; i++) {
+                        l16[i] = Math.max(-1, Math.min(1, l[i])) * 0x7FFF;
+                        r16[i] = Math.max(-1, Math.min(1, r[i])) * 0x7FFF;
+                    }
+                    const buf = mp3EncoderRef.current.encodeBuffer(l16, r16);
+                    if (buf.length > 0) mp3DataRef.current.push(new Int8Array(buf));
+                };
+
+                mediaSourceNodeRef.current.connect(processorNodeRef.current);
+                processorNodeRef.current.connect(audioCtxRef.current.destination);
+
+                setIsRecording(true);
+                recordingTimerRef.current = setInterval(() => setRecordingDuration(p => p + 1), 1000);
+            }, [recordingQuality, station]);
+
+            useEffect(() => {
+                const check = () => {
+                    const sched = activeScheduleRef.current;
+                    if (!sched) return;
+                    const now = new Date();
+                    if (sched.type === 'timer') {
+                        if (isRecording && recordingDuration >= sched.duration) { setActiveSchedule(null); stopRecording(); }
+                    } else {
+                        const nowMs = now.getTime();
+                        const isTime = nowMs >= sched.start && nowMs < sched.end;
+                        const isDay = sched.type === 'date' ? true : sched.days.includes(now.getDay());
+                        if (isTime && isDay) {
+                            if (!isRecording && !isLoading) {
+                                if (sched.stationId && station?.id !== sched.stationId) {
+                                    const target = allStations.find(s => s.id === sched.stationId);
+                                    if (target) onStationSelect(target);
+                                } else { startRecording(); }
+                            }
+                        } else if (isRecording && nowMs >= sched.end) { setActiveSchedule(null); stopRecording(); }
+                    }
+                };
+                const intv = setInterval(check, 1000);
+                return () => clearInterval(intv);
+            }, [isRecording, recordingDuration, isLoading, station, allStations]);
+
+            useEffect(() => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                const onPlay = () => { setIsPlaying(true); setIsBuffering(false); setupKeepAlive(true); };
+                const onPause = () => { setIsPlaying(false); setupKeepAlive(false); };
+                const onWaiting = () => setIsBuffering(true);
+                const onPlaying = () => setIsBuffering(false);
+                const onError = () => { setIsPlaying(false); setIsBuffering(false); setError("Error de conexión. Reintentando..."); };
+                audio.addEventListener('play', onPlay);
+                audio.addEventListener('pause', onPause);
+                audio.addEventListener('waiting', onWaiting);
+                audio.addEventListener('playing', onPlaying);
+                audio.addEventListener('error', onError);
+                return () => {
+                    audio.removeEventListener('play', onPlay);
+                    audio.removeEventListener('pause', onPause);
+                    audio.removeEventListener('waiting', onWaiting);
+                    audio.removeEventListener('playing', onPlaying);
+                    audio.removeEventListener('error', onError);
+                };
+            }, [station, setupKeepAlive]);
+
+            useEffect(() => {
+                if (audioRef.current && station) {
+                    audioRef.current.src = station.url;
+                    audioRef.current.load();
+                    audioRef.current.play().catch(() => {});
+                }
+            }, [station?.id]);
+
+            useEffect(() => { if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume; }, [volume, isMuted]);
+
+            const applySchedule = () => {
+                if (schedMode === 'duration') {
+                    setActiveSchedule({ type: 'timer', duration: parseInt(schedDurationInput) * 60 });
+                    setShowScheduler(false);
+                    setTimeout(startRecording, 200);
+                } else {
+                    if (!schedStartTime || !schedEndTime) return;
+                    let start = new Date(), end = new Date();
+                    const [sH, sM] = schedStartTime.split(':').map(Number);
+                    const [eH, eM] = schedEndTime.split(':').map(Number);
+                    if (schedRecurrence === 'date' && schedDate) {
+                        const [y, m, d] = schedDate.split('-').map(Number);
+                        start.setFullYear(y, m-1, d); end.setFullYear(y, m-1, d);
+                    }
+                    start.setHours(sH, sM, 0, 0); end.setHours(eH, eM, 0, 0);
+                    if (end < start) end.setDate(end.getDate() + 1);
+                    setActiveSchedule({
+                        type: schedRecurrence === 'date' ? 'date' : 'schedule',
+                        start: start.getTime(), end: end.getTime(),
+                        stationId: schedStationId || station?.id,
+                        days: schedDays
+                    });
+                    setShowScheduler(false);
+                }
+            };
+
+            return (
+                <div className="glass p-8 rounded-3xl shadow-2xl relative overflow-hidden transition-all duration-500">
+                    <audio ref={audioRef} crossOrigin="anonymous" hidden />
+                    <div className={`absolute -top-24 -left-24 w-64 h-64 rounded-full blur-[100px] transition-all duration-1000 ${isPlaying ? 'bg-cyan-500/20' : 'bg-slate-500/10'}`}></div>
+
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="flex gap-2">
+                            <button onClick={() => { setShowScheduler(!showScheduler); setShowSettings(false); }} className={`relative p-2.5 rounded-xl transition-all ${showScheduler || activeSchedule ? 'bg-tuner-accent text-tuner-dark shadow-[0_0_15px_rgba(34,211,238,0.4)]' : 'bg-slate-800/50 text-slate-400 hover:text-white'}`}>
+                                <CalendarClock size={20} />
+                                {activeSchedule && <span className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full border-2 border-slate-900 animate-pulse"></span>}
+                            </button>
+                            <button onClick={() => { setShowSettings(!showSettings); setShowScheduler(false); }} className={`p-2.5 rounded-xl transition-all ${showSettings ? 'bg-slate-800 text-tuner-accent' : 'bg-slate-800/50 text-slate-400 hover:text-white'}`}>
+                                <Settings size={20} />
+                            </button>
+                        </div>
+                        <button className="p-2.5 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white transition-colors"><Share2 size={20} /></button>
+                    </div>
+
+                    {showSettings && (
+                        <div className="absolute inset-x-4 top-20 bottom-4 z-40 glass p-6 rounded-2xl animate-in fade-in zoom-in-95 overflow-y-auto custom-scrollbar">
+                            <div className="flex justify-between mb-6 sticky top-0 bg-transparent backdrop-blur-md pb-2 z-10">
+                                <h4 className="font-bold text-white flex items-center gap-2 uppercase tracking-widest"><Palette size={18} className="text-tuner-accent"/> Configuración</h4>
+                                <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white"><X size={20}/></button>
+                            </div>
+                            <div className="space-y-6">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">TEMA VISUAL</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button onClick={onThemeToggle} className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${currentTheme === 'dark' ? 'bg-slate-800 border-tuner-accent text-tuner-accent' : 'bg-slate-900/50 border-slate-700 text-slate-500'}`}><Moon size={20} /><span className="text-[10px] font-bold">OSCURO</span></button>
+                                        <button onClick={onThemeToggle} className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${currentTheme === 'light' ? 'bg-tuner-light-bg border-tuner-accent text-tuner-accent shadow-inner' : 'bg-slate-900/50 border-slate-700 text-slate-500'}`}><Sun size={20} /><span className="text-[10px] font-bold">GRIS CLARO</span></button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">CALIDAD GRABACIÓN MP3</p>
+                                    <div className="space-y-2">
+                                        {RECORDING_QUALITIES.map(q => (
+                                            <button key={q.id} onClick={() => { setRecordingQuality(q.bits); localStorage.setItem(QUALITY_STORAGE_KEY, q.bits); }} className={`w-full py-2 px-4 rounded-lg text-xs font-medium text-left transition-all ${recordingQuality === q.bits ? 'bg-tuner-accent/10 border border-tuner-accent/30 text-tuner-accent' : 'bg-slate-900/50 border-slate-700 text-slate-400'}`}>{q.label}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="pt-4 border-t border-slate-800 space-y-4">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Acerca de WaveTuner</p>
+                                    <div className="text-[10px] space-y-1.5 font-mono">
+                                        <div className="flex justify-between gap-4 text-slate-500 font-medium"><span>Versión:</span><span className="text-white font-bold text-right">v{APP_VERSION}</span></div>
+                                        <div className="flex justify-between gap-4 text-slate-500 font-medium"><span>Fecha de versión:</span><span className="text-white font-bold text-right">{VERSION_DATE}</span></div>
+                                        <div className="flex justify-between gap-4 text-slate-500 font-medium"><span>Desarrollador:</span><span className="text-white font-bold text-right">Magdiel Mendoza</span></div>
+                                        <div className="flex justify-between gap-4 text-slate-500 font-medium"><span>AI:</span><span className="text-white font-bold text-right">Gemini (Google)</span></div>
+                                        <div className="flex justify-between gap-4 text-slate-500 font-medium"><span>Optimización:</span><span className="text-cyan-400 font-bold text-right">Android 15 Keep-Alive</span></div>
+                                        <div className="flex justify-between gap-4 text-slate-500 font-medium"><span>Motor:</span><span className="text-white font-bold text-right">LameJS (MP3 Native)</span></div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 italic leading-tight mt-2 uppercase tracking-tight opacity-70">
+                                        WaveTuner es un proyecto colaborativo enfocado en la simplicidad y potencia del streaming FM nativo.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showScheduler && (
+                        <div className="absolute inset-x-4 top-20 z-40 glass p-6 rounded-2xl animate-in fade-in zoom-in-95 max-h-[440px] overflow-y-auto custom-scrollbar">
+                            <div className="flex justify-between mb-4">
+                                <h4 className="font-bold text-white flex items-center gap-2 uppercase tracking-widest"><Clock size={18} className="text-tuner-accent"/> Programar</h4>
+                                <button onClick={() => setShowScheduler(false)} className="text-slate-400 hover:text-white"><X size={20}/></button>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex bg-slate-900/80 p-1 rounded-xl">
+                                    <button onClick={() => setSchedMode('duration')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${schedMode === 'duration' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>TEMPORIZADOR</button>
+                                    <button onClick={() => setSchedMode('time')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${schedMode === 'time' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>HORARIO</button>
+                                </div>
+                                {schedMode === 'duration' ? (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest ml-1">Duración (Minutos)</label>
+                                        <input type="number" value={schedDurationInput} onChange={e => setSchedDurationInput(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none focus:border-tuner-accent" />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest ml-1">Radio a Grabar</label>
+                                            <select value={schedStationId} onChange={e => setSchedStationId(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white text-xs outline-none focus:border-tuner-accent">
+                                                <option value="">Radio actual...</option>
+                                                {allStations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setSchedRecurrence('daily')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${schedRecurrence === 'daily' ? 'bg-tuner-accent/10 border-tuner-accent text-tuner-accent' : 'border-slate-800 text-slate-500'}`}>DIARIO</button>
+                                            <button onClick={() => setSchedRecurrence('date')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${schedRecurrence === 'date' ? 'bg-tuner-accent/10 border-tuner-accent text-tuner-accent' : 'border-slate-800 text-slate-500'}`}>FECHA</button>
+                                        </div>
+                                        {schedRecurrence === 'daily' ? (
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest ml-1">Días</label>
+                                                <div className="flex justify-between gap-1">
+                                                    {DAYS_SHORT.map((d, i) => <button key={i} onClick={() => setSchedDays(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i])} className={`w-8 h-8 rounded-lg text-[10px] font-bold transition-all border ${schedDays.includes(i) ? 'bg-tuner-accent border-tuner-accent text-tuner-dark shadow-lg shadow-tuner-accent/20' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600'}`}>{d}</button>)}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest ml-1">Fecha</label>
+                                                <input type="date" value={schedDate} onChange={e => setSchedDate(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white text-xs [color-scheme:dark] outline-none" />
+                                            </div>
+                                        )}
+                                        <div className="flex gap-2">
+                                            <div className="flex-1 space-y-1"><label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest ml-1">Inicio</label><input type="time" value={schedStartTime} onChange={e => setSchedStartTime(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white [color-scheme:dark] text-xs outline-none" /></div>
+                                            <div className="flex-1 space-y-1"><label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest ml-1">Fin</label><input type="time" value={schedEndTime} onChange={e => setSchedEndTime(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white [color-scheme:dark] text-xs outline-none" /></div>
+                                        </div>
+                                    </div>
+                                )}
+                                <button onClick={applySchedule} className="w-full py-3 bg-tuner-accent text-tuner-dark font-black rounded-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 uppercase text-xs tracking-wider shadow-lg shadow-tuner-accent/10"><Check size={16} /> ACTIVAR</button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col items-center mb-8 relative z-10">
+                        <div className={`relative w-40 h-40 rounded-full flex items-center justify-center border-4 mb-6 transition-all duration-700 ${isPlaying ? 'border-tuner-accent shadow-[0_0_50px_rgba(34,211,238,0.2)] scale-105' : 'border-slate-800'}`}>
+                            <Radio className={`w-16 h-16 ${isPlaying ? 'text-tuner-accent' : 'text-slate-700'}`} />
+                            {/* ONDA EXPANSIVA: pointer-events-none vital para no interferir con botones superiores */}
+                            {isPlaying && <div className="absolute inset-0 rounded-full border border-tuner-accent/30 animate-ping pointer-events-none"></div>}
+                            {isBuffering && <div className="absolute inset-0 rounded-full flex items-center justify-center bg-tuner-dark/60 z-20 pointer-events-none"><Loader2 className="w-10 h-10 text-tuner-accent animate-spin" /></div>}
+                        </div>
+                        <Visualizer isPlaying={isPlaying} />
+                        <h2 className="text-2xl font-black text-white text-center mb-1 truncate w-full px-2">{station ? station.name : 'Sintoniza una Radio'}</h2>
+                        <div className={`text-[10px] tracking-[0.2em] font-mono font-bold uppercase text-center ${isRecording ? 'text-red-500 animate-pulse' : isBuffering ? 'text-tuner-accent' : isPlaying ? 'text-tuner-accent' : 'text-slate-600'}`}>
+                            {isRecording ? `GRABANDO MP3 • ${Math.floor(recordingDuration/60)}:${(recordingDuration%60).toString().padStart(2,'0')}` : isBuffering ? 'BUFFERING...' : isPlaying ? 'AL AIRE' : 'LISTO'}
+                        </div>
+                    </div>
+
+                    {error && <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-center gap-3 animate-in slide-in-from-bottom-2"><AlertCircle size={16} className="shrink-0" /><span>{error}</span></div>}
+
+                    <div className={`space-y-6 relative z-10 ${!station ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                        <div className="flex justify-center">
+                            <button onClick={() => isPlaying ? audioRef.current.pause() : audioRef.current.play()} className={`w-20 h-20 flex items-center justify-center rounded-3xl transition-all shadow-xl active:scale-90 ${isPlaying ? 'bg-transparent border-2 border-tuner-accent text-tuner-accent' : 'bg-tuner-accent text-tuner-dark shadow-tuner-accent/20'}`}>
+                                {isPlaying ? <Square size={28} fill="currentColor" /> : <Play size={36} fill="currentColor" className="ml-1" />}
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-4 bg-slate-900/50 p-3 rounded-2xl border border-white/5">
+                            <button onClick={() => setIsMuted(!isMuted)} className="text-slate-500 hover:text-white transition-colors">{isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}</button>
+                            <input type="range" min="0" max="1" step="0.01" value={isMuted ? 0 : volume} onChange={e => {setVolume(parseFloat(e.target.value)); setIsMuted(false);}} className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                        </div>
+                        <button onClick={isRecording ? stopRecording : startRecording} className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-sm transition-all shadow-lg ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-red-500/20' : 'bg-slate-800 hover:bg-slate-700 text-white hover:shadow-white/5'}`}><Mic size={18} />{isRecording ? 'Detener' : 'Grabar MP3'}</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const StationList = ({ stations, currentId, onSelect, onDelete, onToggleFav }) => {
+            if (stations.length === 0) return (
+                <div className="text-center py-20 px-4 glass rounded-3xl border-dashed border-slate-800"><Radio size={48} className="mx-auto mb-4 text-slate-700" /><p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Tu dial está vacío</p><p className="text-slate-600 text-xs mt-1">Agrega una URL de stream para comenzar.</p></div>
+            );
+            const sorted = [...stations].sort((a,b) => (a.favorite === b.favorite) ? b.addedAt - a.addedAt : (a.favorite ? -1 : 1));
+            return (
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    {sorted.map(s => (
+                        <div key={s.id} className={`group flex items-center gap-4 p-4 rounded-2xl border transition-all ${currentId === s.id ? 'bg-tuner-accent/10 border-tuner-accent/40 shadow-lg' : 'bg-slate-900/40 border-slate-800/50 hover:bg-slate-800/60 hover:border-slate-700'}`}>
+                            <button onClick={() => onSelect(s)} className="flex-1 text-left min-w-0 flex items-center gap-4">
+                                <div className={`p-3 rounded-xl shrink-0 transition-colors ${currentId === s.id ? 'bg-tuner-accent text-tuner-dark' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>{currentId === s.id ? <Radio size={20} className="animate-pulse"/> : <PlayCircle size={20}/>}</div>
+                                <div className="truncate"><h3 className={`font-bold truncate ${currentId === s.id ? 'text-white' : 'text-slate-300'}`}>{s.name}</h3><p className="text-[10px] font-mono text-slate-600 truncate mt-0.5 uppercase tracking-tighter">{s.url.replace(/^https?:\/\//, '')}</p></div>
+                            </button>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => onToggleFav(s.id)} className={`p-2 rounded-lg hover:bg-slate-700 transition-colors ${s.favorite ? 'text-yellow-500' : 'text-slate-500'}`}><Star size={18} fill={s.favorite ? "currentColor" : "none"}/></button>
+                                <button onClick={() => confirm(`¿Eliminar "${s.name}"?`) && onDelete(s.id)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"><Trash2 size={18}/></button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const AddStationForm = ({ onAdd, onImport, stations }) => {
+            const [name, setName] = useState('');
+            const [url, setUrl] = useState('');
+            const [isOpen, setIsOpen] = useState(false);
+            const fileRef = useRef(null);
+            const handleExport = () => {
+                const content = "#EXTM3U\n" + stations.map(s => `#EXTINF:-1,${s.name}\n${s.url}`).join("\n");
+                const blob = new Blob([content], { type: 'text/plain' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backupWaveTuner.m3u`; a.click();
+            };
+            const handleFile = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const r = new FileReader();
+                r.onload = (ev) => {
+                    const lines = ev.target.result.split(/\r?\n/); const imp = []; let curr = '';
+                    lines.forEach(l => { 
+                        const line = l.trim(); if (!line) return;
+                        if(line.startsWith('#EXTINF:')) curr = line.split(',')[1]?.trim();
+                        else if(!line.startsWith('#')) { imp.push({name: curr || 'Radio', url: line}); curr = ''; }
+                    });
+                    onImport(imp); setIsOpen(false);
+                };
+                r.readAsText(file);
+            };
+            return isOpen ? (
+                <form onSubmit={e => {e.preventDefault(); onAdd(name, url); setName(''); setUrl(''); setIsOpen(false);}} className="bg-slate-900 p-4 rounded-xl border border-slate-800 mb-6 animate-in fade-in slide-in-from-top-4 shadow-2xl">
+                    <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-2">
+                        <h3 className="text-white font-black text-xs uppercase tracking-tighter opacity-50">Gestión de Emisoras</h3>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={handleExport} className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 text-slate-300 rounded-lg hover:text-white transition-all text-[10px] font-black uppercase tracking-tighter shadow-sm">
+                                <FileDown size={14}/>
+                                <span>EXPORTAR</span>
+                            </button>
+                            <button type="button" onClick={() => fileRef.current.click()} className="flex items-center gap-1.5 px-2 py-1.5 bg-tuner-accent/10 text-tuner-accent rounded-lg border border-tuner-accent/30 hover:text-white transition-all text-[10px] font-black uppercase tracking-tighter shadow-sm">
+                                <FileUp size={14}/>
+                                <span>IMPORTAR</span>
+                            </button>
+                        </div>
+                        <input type="file" ref={fileRef} onChange={handleFile} hidden accept=".m3u,.m3u8" />
+                    </div>
+                    <div className="space-y-3">
+                        <input placeholder="Nombre de Radio" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-lg focus:outline-none focus:border-tuner-accent text-white" required />
+                        <input type="url" placeholder="https://stream.example.com/radio.mp3" value={url} onChange={e => setUrl(e.target.value)} className="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-lg focus:outline-none focus:border-tuner-accent text-white" required />
+                    </div>
+                    <div className="flex gap-3 mt-4">
+                        <button type="button" onClick={() => setIsOpen(false)} className="flex-1 py-2 bg-slate-800 text-white rounded-lg text-[10px] font-black uppercase">Cancelar</button>
+                        <button type="submit" className="flex-1 py-2 bg-tuner-accent text-slate-900 font-black rounded-lg text-[10px] uppercase">Guardar</button>
+                    </div>
+                </form>
+            ) : <button onClick={() => setIsOpen(true)} className="w-full py-3 bg-slate-800/40 text-slate-300 rounded-xl border border-slate-700 border-dashed flex items-center justify-center gap-2 mb-6"><PlusCircle size={20} /><span className="text-xs font-black uppercase tracking-widest">Agregar Nueva Emisora</span></button>;
+        };
+
+        const App = () => {
+            const [stations, setStations] = useState(() => {
+                try {
+                    const stored = localStorage.getItem(STORAGE_KEY);
+                    return stored ? JSON.parse(stored) : DEFAULT_STATIONS;
+                } catch(e) { return DEFAULT_STATIONS; }
+            });
+            const [current, setCurrent] = useState(null);
+            const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'dark');
+
+            useEffect(() => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stations));
+                localStorage.setItem(THEME_KEY, theme);
+                if (theme === 'light') document.body.classList.add('light-theme');
+                else document.body.classList.remove('light-theme');
+            }, [stations, theme]);
+
+            const handleAdd = (name, url) => setStations([{ id: uuidv4(), name, url, addedAt: Date.now(), favorite: false }, ...stations]);
+            const handleImport = (imp) => setStations([...imp.map(s => ({...s, id: uuidv4(), addedAt: Date.now(), favorite: false})), ...stations]);
+            const handleDelete = (id) => { setStations(stations.filter(s => s.id !== id)); if(current?.id === id) setCurrent(null); };
+            const handleToggleFav = (id) => setStations(stations.map(s => s.id === id ? {...s, favorite: !s.favorite} : s));
+
+            return (
+                <div className="min-h-screen p-4 md:p-12 lg:p-16 flex justify-center items-start transition-colors duration-500">
+                    <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-12">
+                        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 lg:sticky lg:top-12">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="p-3 bg-tuner-accent rounded-2xl text-tuner-dark shadow-xl shadow-tuner-accent/20"><RadioTower size={28} /></div>
+                                <div><h1 className="text-3xl font-black text-white leading-none tracking-tighter">WaveTuner</h1><p className="text-tuner-accent text-xs font-black tracking-[0.2em] mt-1 flex items-center gap-1 uppercase"><Sparkles size={10}/> Premium FM v{APP_VERSION}</p></div>
+                            </div>
+                            <RadioPlayer station={current} onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} currentTheme={theme} allStations={stations} onStationSelect={setCurrent} />
+                            <div className="glass p-6 rounded-3xl text-[10px] text-slate-500 leading-relaxed border-white/5 space-y-4">
+                                <div className="flex items-center gap-3 text-tuner-accent font-black uppercase tracking-widest"><Smartphone size={16}/> PWA Instalable</div>
+                                <p className="font-medium">WaveTuner ahora soporta instalación nativa y grabación en formato <code className="text-tuner-accent font-black px-1 rounded bg-tuner-accent/10">MP3</code>, optimizado para Android 15.</p>
+                                <p className="text-[10px] text-slate-500 italic mt-2 uppercase tracking-tighter opacity-70">Accede a la configuración (⚙️) para ver los detalles.</p>
+                            </div>
+                        </div>
+                        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-8">
+                            <div>
+                                <div className="flex items-center justify-between mb-6"><h2 className="text-2xl font-black text-white uppercase tracking-tight">Tu Dial Privado</h2><span className="px-4 py-1.5 bg-slate-900 rounded-full text-[10px] font-black text-slate-400 border border-slate-800 uppercase tracking-widest">{stations.length} EMISORAS</span></div>
+                                <AddStationForm onAdd={handleAdd} onImport={handleImport} stations={stations} />
+                            </div>
+                            <div className="mt-4"><StationList stations={stations} currentId={current?.id} onSelect={setCurrent} onDelete={handleDelete} onToggleFav={handleToggleFav} /></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('WaveTuner WT FM: Registrada v' + APP_VERSION);
+                }).catch(err => {
+                    console.log('WaveTuner WT FM: Error', err);
+                });
+            });
+        }
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
